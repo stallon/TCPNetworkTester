@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:orientation="vertical"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent">
+	
+	<TextView 
+		android:text="Android TCP TestClient v1.0" 
+		android:id="@+id/textView1" 
+		android:layout_width="fill_parent" 
+		android:layout_height="wrap_content" android:gravity="center" 
+		android:paddingTop="10px" android:paddingBottom="30px"
+		android:textSize="20sp"/>
+		
+	<LinearLayout
+		android:id="@+id/linearLayout1" 
+		android:layout_width="fill_parent" 
+		android:layout_height="wrap_content">
+    
+	    <Button 
+	    	android:layout_height="wrap_content" 
+	    	android:id="@+id/btnConnect" 
+	    	android:layout_width="wrap_content" 
+	    	android:text="@string/connect" android:layout_weight="1"/>
+	    	
+	    <Button 
+	    	android:layout_height="wrap_content" 
+	    	android:id="@+id/btnDisconnect" 
+	    	android:layout_width="wrap_content" android:text="@string/disconnect" android:layout_weight="1"/>
+	    	
+	    <Button 
+	    	android:text="@string/refresh" 
+	    	android:layout_height="wrap_content" 
+	    	android:id="@+id/btnRefresh" 
+	    	android:layout_width="wrap_content" android:layout_weight="1"/>
+	</LinearLayout>
+	<LinearLayout android:id="@+id/linearLayout2" android:layout_width="fill_parent" android:layout_height="wrap_content">
+		<Button android:text="@string/send" android:layout_height="wrap_content" android:id="@+id/btnSend" android:layout_width="wrap_content" android:layout_weight="1"></Button>
+		<Button android:text="@string/stop" android:layout_height="wrap_content" android:id="@+id/btnStop" android:layout_width="wrap_content" android:layout_weight="1"></Button>
+		<Button android:text="@string/http" android:layout_height="wrap_content" android:id="@+id/btnHttp" android:layout_width="wrap_content" android:layout_weight="1"></Button>
+	</LinearLayout>
+	
+	<TextView 
+		android:text="-----------------------------------" 
+		android:gravity="center" 
+		android:layout_height="wrap_content" 
+		android:layout_width="fill_parent"
+		android:paddingBottom="20px" android:paddingTop="20px" />
+	
+	<TextView 
+		android:text="Network Status Information" 
+		android:id="@+id/textView1" 
+		android:layout_width="fill_parent" 
+		android:layout_height="wrap_content" android:gravity="center" 
+		android:paddingBottom="10px" android:paddingTop="20px" android:textSize="20sp"/>
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content">
+		<TextView 
+			android:text="[WiFi/3G] : " 
+			android:layout_width="wrap_content" 
+			android:layout_height="wrap_content"/>
+		<TextView 
+		android:text="3G" 
+		android:id="@+id/wifi3g" 
+		android:layout_height="wrap_content" android:layout_width="fill_parent"/>
+	</LinearLayout>
+	
+	<LinearLayout
+	android:layout_width="fill_parent"
+	android:layout_height="wrap_content">	
+		<TextView 
+			android:text="[TCP Connection] : " 
+			android:layout_width="wrap_content" 
+			android:layout_height="wrap_content"/>	
+		<TextView 
+			android:text="DISCONNECTED" 
+			android:id="@+id/isConnected" 
+			android:layout_width="fill_parent" 
+			android:layout_height="wrap_content"/>
+	</LinearLayout>
+	
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content">
+		
+	<TextView 
+		android:text="[IP Address] : " 
+		android:layout_width="wrap_content" 
+		android:layout_height="wrap_content"/>
+	<TextView
+		android:id="@+id/ipAddr"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:text="0.0.0.0"/>
+	</LinearLayout>
+	
+	<TextView 
+		android:text="-----------------------------------" 
+		android:gravity="center" 
+		android:layout_height="wrap_content" 
+		android:layout_width="fill_parent"
+		android:paddingBottom="20px" android:paddingTop="20px" />
+	
+	<TextView 
+	android:text="Tx/Rx Statistics" 
+	android:id="@+id/textView1" 
+	android:layout_width="fill_parent" 
+	android:layout_height="wrap_content" android:gravity="center" 
+	android:paddingBottom="10px" android:paddingTop="20px" android:textSize="20sp"/>
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content">
+		<TextView 
+			android:text="[TX] : " 
+			android:layout_width="wrap_content" 
+			android:layout_height="wrap_content"/>
+		<TextView 
+		android:text="0" 
+		android:id="@+id/txStat" 
+		android:layout_height="wrap_content" android:layout_width="fill_parent"/>
+	</LinearLayout>
+	
+	<LinearLayout
+	android:layout_width="fill_parent"
+	android:layout_height="wrap_content">	
+		<TextView 
+			android:text="[RX] : " 
+			android:layout_width="wrap_content" 
+			android:layout_height="wrap_content"/>	
+		<TextView 
+			android:text="0" 
+			android:id="@+id/rxStat" 
+			android:layout_width="fill_parent" 
+			android:layout_height="wrap_content"/>
+	</LinearLayout>
+</LinearLayout>
