@@ -9,7 +9,5 @@ public class TesterDashboard extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-        
-        System.out.println("adsfsadf");
     }
 }
