@@ -53,6 +53,7 @@
 		android:layout_width="fill_parent" 
 		android:layout_height="wrap_content" android:gravity="center" 
 		android:paddingBottom="10px" android:paddingTop="20px" android:textSize="20sp"/>
+
 	<LinearLayout
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content">
@@ -66,6 +67,18 @@
 		android:layout_height="wrap_content" android:layout_width="fill_parent"/>
 	</LinearLayout>
 	
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content">
+		<TextView 
+			android:text="[Availability/Connectivity] : " 
+			android:layout_width="wrap_content" 
+			android:layout_height="wrap_content"/>
+		<TextView 
+		android:text="Unavailable" 
+		android:id="@+id/isAvailable" 
+		android:layout_height="wrap_content" android:layout_width="fill_parent"/>
+	</LinearLayout>
 	<LinearLayout
 	android:layout_width="fill_parent"
 	android:layout_height="wrap_content">	
@@ -85,11 +98,25 @@
 		android:layout_height="wrap_content">
 		
 	<TextView 
-		android:text="[IP Address] : " 
+		android:text="[Device IP Address] : " 
 		android:layout_width="wrap_content" 
 		android:layout_height="wrap_content"/>
 	<TextView
 		android:id="@+id/ipAddr"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:text="0.0.0.0"/>
+	</LinearLayout>
+	
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content">
+	<TextView 
+		android:text="[Socket IP Address] : " 
+		android:layout_width="wrap_content" 
+		android:layout_height="wrap_content"/>
+	<TextView
+		android:id="@+id/socketIpAddr"
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content"
 		android:text="0.0.0.0"/>
