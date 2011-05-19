@@ -8,4 +8,7 @@
     <string name="send">StartSend</string>
     <string name="stop">StopSend</string>
     <string name="http">HTTP call</string>
+    <string name="device_id">13403</string>
+    <string name="server_ip">10.64.50.209</string>
+    <string name="server_port">11001</string>
 </resources>

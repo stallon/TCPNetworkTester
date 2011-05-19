@@ -1,13 +1,22 @@
 package com.hangame.android.test;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.Date;
 import java.util.Enumeration;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -44,8 +53,8 @@ public class TesterDashboard extends Activity {
 	private TextView rxStat;
 		
 	private Socket socketToServer = null;
-	private final static String SERVER_IP = "119.205.221.76";
-	private final static int SERVER_PORT = 11001;
+	private String SERVER_IP;
+	private int SERVER_PORT;
 	
 	// Objects for WAKE-LOCK
 	private PowerManager pwrManager;
@@ -53,8 +62,19 @@ public class TesterDashboard extends Activity {
 	
 	// BroadcastReceiver for Network change events
 	private BroadcastReceiver receiver;
+	
+	// Message Handler
 	private Handler handler;
 	private final static int WHAT_NETWORK_CHANGED = 0;
+	private final static int WHAT_SEND_ECHO = 1;
+	private final static int WHAT_RECEIVE_ECHO = 2;
+	private final static int WHAT_SEND_FAIL = 3;
+	
+	// Objects for echo data transmission
+	private int deviceID;
+	private int packetIndex = 0;
+	private boolean isSending = false;		// TRUE when a user presses StartSend, FALSE when a user presses StopSend.
+	private Timer sendTimer;
 	
     /** Called when the activity is first created. */
     @Override
@@ -81,6 +101,11 @@ public class TesterDashboard extends Activity {
         socketIpAddr = (TextView)findViewById(R.id.socketIpAddr);
         txStat = (TextView)findViewById(R.id.txStat);
         rxStat = (TextView)findViewById(R.id.rxStat);
+        
+        // Obtain Server IP, Port, deviceID from strings.xml
+        SERVER_IP = getResources().getString(R.string.server_ip);
+        SERVER_PORT = Integer.parseInt(getResources().getString(R.string.server_port));
+        deviceID = Integer.parseInt(getResources().getString(R.string.device_id));
         
         // Register Button Event Handlers
         btnConnect.setOnClickListener(new View.OnClickListener() {	
@@ -145,18 +170,12 @@ public class TesterDashboard extends Activity {
         handler = new Handler() {
         	@Override
         	public void handleMessage(Message msg) {
-        		switch ( msg.what ) {
-        		case WHAT_NETWORK_CHANGED:
-        			TesterDashboard.this.refresh();
-        			break;
-    			default:
-    				Toast.makeText(getApplicationContext(), "Unknown Message", Toast.LENGTH_SHORT).show();
-        		}
+        		TesterDashboard.this.handleMessage(msg);
         	}
         };
     }
     
-    protected void onResume() {
+	protected void onResume() {
 		super.onResume();
 		wakeLock.acquire();
 		
@@ -208,7 +227,13 @@ public class TesterDashboard extends Activity {
     	}
     	
     	try {
+    		// Connect to echo server
     		socketToServer = new Socket(SERVER_IP, SERVER_PORT);
+    		
+    		// state initialization
+    		packetIndex = 0;
+    		isSending = false;
+    		
     	} catch (Exception e) {
     		Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
     	} finally {
@@ -285,12 +310,155 @@ public class TesterDashboard extends Activity {
     	}
     }
     
+    private void handleMessage(Message msg) {
+    	
+    	int idx;
+    	long rtt;
+    	Packet packet;
+    	
+    	switch ( msg.what ) {
+		case WHAT_NETWORK_CHANGED:
+			TesterDashboard.this.refresh();
+			break;
+			
+		case WHAT_SEND_ECHO:
+			idx = msg.arg1; // packet index
+			txStat.setText("OK -- idx[" + idx + "] sentTime[" + new Date().toLocaleString() + "]");
+			break;
+			
+		case WHAT_SEND_FAIL:
+			idx = msg.arg1; // packet index
+			txStat.setText("FAIL -- idx[" + idx + "] failTime[" + new Date().toLocaleString() + "]");
+			break;
+			
+		case WHAT_RECEIVE_ECHO:
+			packet = (Packet)msg.obj;
+			Date receivedTime = new Date();
+			
+			if ( packet.deviceID != this.deviceID ) {
+				rxStat.setText("Wrong DeviceID [" + packet.deviceID + "] ReceiveTime [" + receivedTime.toLocaleString() + "]");
+			} else {
+				
+				rtt = receivedTime.getTime() - (long)(packet.timestamp * 1000);
+				rxStat.setText("OK [idx:" + packet.idx + "]" + "   RTT [" + rtt + "ms]");
+			}
+			break;
+		default:
+			Toast.makeText(getApplicationContext(), "Unknown Message", Toast.LENGTH_SHORT).show();
+		}
+	}
+    
     private void send() {
-    	wifi3g.setText("send Pressed");
+    	
+    	if ( null == socketToServer || !socketToServer.isConnected() ) {
+    		Toast.makeText(getApplicationContext(), "TCP Connect Required", Toast.LENGTH_SHORT).show();
+    		return;
+    	} else if ( isSending ) {
+    		Toast.makeText(getApplicationContext(), "Already Sending", Toast.LENGTH_SHORT).show();
+    		return;
+    	}
+    	
+    	// send flag is set to TRUE
+    	isSending = true;
+    	
+    	// Spawn a Message Dispatching and Reading Thread
+    	Thread receiveThread = new Thread() {
+    		@Override
+    		public void run() {
+
+    			while ( isSending ) {
+    				try {
+    					if ( null == socketToServer || !socketToServer.isConnected() ) {
+    						Toast.makeText(getApplicationContext(), "Receive Thread Terminated[Socket Invalid]", Toast.LENGTH_SHORT).show();
+    						handler.sendMessage(handler.obtainMessage(WHAT_NETWORK_CHANGED));
+    						break;
+    					}
+    					
+    					InputStream in = socketToServer.getInputStream();
+    					byte[] echoReply = new byte[Packet.PACKET_SIZE];
+    					int count = 0;
+    					
+    					while ( count < Packet.PACKET_SIZE ) {
+    						count += in.read(echoReply, count, Packet.PACKET_SIZE-count);	// read till byte stream read can fill the packet buffer (20bytes)
+    					}
+    					
+    					ByteBuffer readBuf = ByteBuffer.wrap(echoReply);
+    					readBuf.order(ByteOrder.LITTLE_ENDIAN);
+    					
+    					int deviceID = readBuf.getInt();
+    					int type = readBuf.getInt();
+    					int idx = readBuf.getInt();
+    					int network = readBuf.getInt();
+    					double timestamp = readBuf.getDouble();
+    					Packet packet = new Packet(deviceID, type, idx, network, timestamp);
+    					
+    					// send internel message to update UI with received data
+    					handler.sendMessage(handler.obtainMessage(WHAT_RECEIVE_ECHO, packet));
+    					
+    					// Echo-back type 1 packet
+    					if ( 0 == type && deviceID == TesterDashboard.this.deviceID ) {
+    						OutputStream out = socketToServer.getOutputStream();
+    						type = 1;
+    						timestamp = (double)(new java.util.Date().getTime()/1000.0);
+    						
+    						// send echo-back with type 1 and new timestamp
+    						Packet sendPacket = new Packet(deviceID, type, idx, network, timestamp);
+    						out.write(sendPacket.encode());
+    					}    					
+    					
+    				} catch(IOException ioe) {
+    					Toast.makeText(getApplicationContext(), ioe.getMessage(), Toast.LENGTH_SHORT).show();
+    				}
+    			}
+    		}
+    	};
+    	receiveThread.start();
+    	
+    	// Spawns a sending task which runs every 1 second periodically.
+    	TimerTask sendTask = new TimerTask() {
+    		@Override
+    		public void run() {
+				if ( socketToServer.isConnected() ) {
+					int network = ((ConnectivityManager)getApplicationContext().
+    						getSystemService(Context.CONNECTIVITY_SERVICE)).getActiveNetworkInfo().getType();
+        			long timestamp = new Date().getTime();
+        			Packet sendPacket = null;
+        			
+        			try {
+						OutputStream out = socketToServer.getOutputStream();
+						
+						sendPacket = new Packet(TesterDashboard.this.deviceID,
+						                        0, 
+						                        packetIndex++, 
+								                network, 
+								                (double)(timestamp/1000.0));
+						
+						out.write(sendPacket.encode());
+						handler.sendMessage(handler.obtainMessage(WHAT_SEND_ECHO, sendPacket));
+					} catch (IOException e) {
+						Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
+						handler.sendMessage(handler.obtainMessage(WHAT_SEND_FAIL, sendPacket));
+					}
+				}	
+    		}
+    	};
+    	
+    	// Schedule Send Task
+    	sendTimer = new Timer();
+    	sendTimer.scheduleAtFixedRate(sendTask, 0, 1000);  
+    	Toast.makeText(getApplicationContext(), "Start Sending", Toast.LENGTH_SHORT).show();
     }
     
     private void stop() {
-    	wifi3g.setText("stop Pressed");
+    	if ( !isSending ) {
+    		Toast.makeText(getApplicationContext(), "Try Start First", Toast.LENGTH_SHORT).show();
+    		return;
+    	}
+    	
+    	isSending = false;
+    	sendTimer.cancel();
+    	
+    	Toast.makeText(getApplicationContext(), "Stop Sending", Toast.LENGTH_SHORT).show();
     }
     
     private void http() {
