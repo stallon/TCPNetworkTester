@@ -262,6 +262,7 @@ public class TesterDashboard extends Activity {
     	if ( null == netInfo ) {
     		wifi3g.setText("No Active Network");
     		isAvailable.setText("Unavailable");
+    		Toast.makeText(getApplicationContext(), "No Active Network", Toast.LENGTH_SHORT).show();
     		return;
     	}
     	
