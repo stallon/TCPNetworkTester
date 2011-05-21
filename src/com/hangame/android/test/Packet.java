@@ -30,5 +30,5 @@ class Packet {
 	public int network;
 	public double timestamp;
 	
-	public final static int PACKET_SIZE = 4*Integer.SIZE + Double.SIZE;
+	public final static int PACKET_SIZE = 24;
 };

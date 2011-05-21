@@ -1,5 +1,6 @@
 package com.hangame.android.test;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -51,6 +52,7 @@ public class TesterDashboard extends Activity {
 	private TextView socketIpAddr;
 	private TextView txStat;
 	private TextView rxStat;
+	private TextView minMaxAvg;
 		
 	private Socket socketToServer = null;
 	private String SERVER_IP;
@@ -69,12 +71,16 @@ public class TesterDashboard extends Activity {
 	private final static int WHAT_SEND_ECHO = 1;
 	private final static int WHAT_RECEIVE_ECHO = 2;
 	private final static int WHAT_SEND_FAIL = 3;
+	private final static int WHAT_RECEIVE_FAIL = 4;
 	
 	// Objects for echo data transmission
 	private int deviceID;
 	private int packetIndex = 0;
 	private boolean isSending = false;		// TRUE when a user presses StartSend, FALSE when a user presses StopSend.
 	private Timer sendTimer;
+	private long minRtt = Long.MAX_VALUE;
+	private long maxRtt = 0;
+	private float avgRtt = 0;
 	
     /** Called when the activity is first created. */
     @Override
@@ -101,6 +107,7 @@ public class TesterDashboard extends Activity {
         socketIpAddr = (TextView)findViewById(R.id.socketIpAddr);
         txStat = (TextView)findViewById(R.id.txStat);
         rxStat = (TextView)findViewById(R.id.rxStat);
+        minMaxAvg = (TextView)findViewById(R.id.minMaxAvg);
         
         // Obtain Server IP, Port, deviceID from strings.xml
         SERVER_IP = getResources().getString(R.string.server_ip);
@@ -188,19 +195,6 @@ public class TesterDashboard extends Activity {
 				
 				// In case the received event is related to network connectivity change,
 				if ( action.equals(ConnectivityManager.CONNECTIVITY_ACTION) ) {
-					ConnectivityManager conManager = 
-						(ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
-					NetworkInfo netInfo = conManager.getActiveNetworkInfo();
-					if ( null == netInfo ) {
-						Toast.makeText(context, "No Active Network", Toast.LENGTH_SHORT).show();
-					} else {
-						String netType = netInfo.getTypeName();
-				    	if ( netType.equals("MOBILE") || netType.equals("mobile") ) {
-				    		netType = "3G";
-				    	}
-						Toast.makeText(context,"Active Network : " + netType, Toast.LENGTH_SHORT).show();
-					}
-					
 					// send a UI Message to the UI Framework
 					handler.sendMessage(handler.obtainMessage(WHAT_NETWORK_CHANGED));
 				}
@@ -231,7 +225,6 @@ public class TesterDashboard extends Activity {
     		socketToServer = new Socket(SERVER_IP, SERVER_PORT);
     		
     		// state initialization
-    		packetIndex = 0;
     		isSending = false;
     		
     	} catch (Exception e) {
@@ -248,6 +241,10 @@ public class TesterDashboard extends Activity {
 		}
     	
     	try {
+    		if ( isSending ) {
+    			stop();
+    		}
+    		
 			socketToServer.close();
 			socketToServer = null;
 			
@@ -263,7 +260,8 @@ public class TesterDashboard extends Activity {
     	NetworkInfo netInfo = conMgr.getActiveNetworkInfo();
     	
     	if ( null == netInfo ) {
-    		Toast.makeText(getApplicationContext(), "Network Down (NetworInfo NULL)", Toast.LENGTH_SHORT).show();
+    		wifi3g.setText("No Active Network");
+    		isAvailable.setText("Unavailable");
     		return;
     	}
     	
@@ -275,10 +273,12 @@ public class TesterDashboard extends Activity {
     	wifi3g.setText(netType);
     	
     	// Display Network Availability and Connectivity
-    	if ( netInfo.isAvailable() ) {
-    		isAvailable.setText("Available/" + netInfo.getState().name());
-    	} else {
+    	if ( !netInfo.isAvailable() ) {
     		isAvailable.setText("Unavailable");
+    	} else if ( !netInfo.isConnected() ) {
+    		isAvailable.setText("NOT Connected");
+    	} else {
+    		isAvailable.setText("Available");
     	}
     	
     	// Display TCP Connection Status
@@ -322,13 +322,14 @@ public class TesterDashboard extends Activity {
 			break;
 			
 		case WHAT_SEND_ECHO:
-			idx = msg.arg1; // packet index
-			txStat.setText("OK -- idx[" + idx + "] sentTime[" + new Date().toLocaleString() + "]");
+			packet = (Packet)msg.obj;
+			txStat.setText("OK -- idx[" + packet.idx + "] sentTime[" + new Date().toLocaleString() + "]");
 			break;
 			
 		case WHAT_SEND_FAIL:
-			idx = msg.arg1; // packet index
-			txStat.setText("FAIL -- idx[" + idx + "] failTime[" + new Date().toLocaleString() + "]");
+			idx = msg.arg1;
+			String errMsg = (String)msg.obj;
+			txStat.setText(errMsg + "-- idx[" + idx + "] failTime[" + new Date().toLocaleString() + "]");
 			break;
 			
 		case WHAT_RECEIVE_ECHO:
@@ -336,15 +337,25 @@ public class TesterDashboard extends Activity {
 			Date receivedTime = new Date();
 			
 			if ( packet.deviceID != this.deviceID ) {
-				rxStat.setText("Wrong DeviceID [" + packet.deviceID + "] ReceiveTime [" + receivedTime.toLocaleString() + "]");
+				rxStat.setText("NOK -- DeviceID[" + packet.deviceID + "] idx[" + packet.idx + "]");
 			} else {
 				
 				rtt = receivedTime.getTime() - (long)(packet.timestamp * 1000);
-				rxStat.setText("OK [idx:" + packet.idx + "]" + "   RTT [" + rtt + "ms]");
+				rxStat.setText("OK -- idx[" + packet.idx + "]" + "   RTT [" + rtt + "ms]");
+				
+				minRtt = (rtt < minRtt) ? rtt : minRtt;
+				maxRtt = ( rtt > maxRtt ) ? rtt : maxRtt;
+				avgRtt = (( avgRtt * packet.idx ) + rtt ) / (packet.idx + 1);
+				
+				minMaxAvg.setText("SENDING - MIN[" + minRtt + "ms]  MAX[" + maxRtt + "ms]   AVG[" + avgRtt + "ms]"  );
 			}
 			break;
+			
+		case WHAT_RECEIVE_FAIL:
+			rxStat.setText((String)msg.obj);	// display exception message thrown by read thread.
+			break;
 		default:
-			Toast.makeText(getApplicationContext(), "Unknown Message", Toast.LENGTH_SHORT).show();
+			rxStat.setText("Unknown Internal Message Received");
 		}
 	}
     
@@ -369,9 +380,8 @@ public class TesterDashboard extends Activity {
     			while ( isSending ) {
     				try {
     					if ( null == socketToServer || !socketToServer.isConnected() ) {
-    						Toast.makeText(getApplicationContext(), "Receive Thread Terminated[Socket Invalid]", Toast.LENGTH_SHORT).show();
-    						handler.sendMessage(handler.obtainMessage(WHAT_NETWORK_CHANGED));
-    						break;
+    						try { Thread.sleep(100); } catch (InterruptedException e) {	}
+    						continue;
     					}
     					
     					InputStream in = socketToServer.getInputStream();
@@ -399,15 +409,15 @@ public class TesterDashboard extends Activity {
     					if ( 0 == type && deviceID == TesterDashboard.this.deviceID ) {
     						OutputStream out = socketToServer.getOutputStream();
     						type = 1;
-    						timestamp = (double)(new java.util.Date().getTime()/1000.0);
+    						timestamp = (double)(new Date().getTime()/1000.0);
     						
     						// send echo-back with type 1 and new timestamp
     						Packet sendPacket = new Packet(deviceID, type, idx, network, timestamp);
     						out.write(sendPacket.encode());
     					}    					
     					
-    				} catch(IOException ioe) {
-    					Toast.makeText(getApplicationContext(), ioe.getMessage(), Toast.LENGTH_SHORT).show();
+    				} catch(Exception ioe) {
+    					handler.sendMessage(handler.obtainMessage(WHAT_RECEIVE_FAIL, ioe.getMessage()));
     				}
     			}
     		}
@@ -419,13 +429,18 @@ public class TesterDashboard extends Activity {
     		@Override
     		public void run() {
 				if ( socketToServer.isConnected() ) {
-					int network = ((ConnectivityManager)getApplicationContext().
-    						getSystemService(Context.CONNECTIVITY_SERVICE)).getActiveNetworkInfo().getType();
+					NetworkInfo netInfo = ((ConnectivityManager)getApplicationContext().
+													getSystemService(Context.CONNECTIVITY_SERVICE)).getActiveNetworkInfo();
+					if ( null == netInfo ) {
+						return;
+					}
+					
+					int network = netInfo.getType();
         			long timestamp = new Date().getTime();
         			Packet sendPacket = null;
         			
         			try {
-						OutputStream out = socketToServer.getOutputStream();
+						BufferedOutputStream out = new BufferedOutputStream(socketToServer.getOutputStream());
 						
 						sendPacket = new Packet(TesterDashboard.this.deviceID,
 						                        0, 
@@ -434,10 +449,10 @@ public class TesterDashboard extends Activity {
 								                (double)(timestamp/1000.0));
 						
 						out.write(sendPacket.encode());
+						out.flush();
 						handler.sendMessage(handler.obtainMessage(WHAT_SEND_ECHO, sendPacket));
-					} catch (IOException e) {
-						Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
-						handler.sendMessage(handler.obtainMessage(WHAT_SEND_FAIL, sendPacket));
+					} catch (Exception e) {
+						handler.sendMessage(handler.obtainMessage(WHAT_SEND_FAIL, packetIndex, 0, e.getMessage()));
 					}
 				}	
     		}
@@ -459,10 +474,24 @@ public class TesterDashboard extends Activity {
     	sendTimer.cancel();
     	
     	Toast.makeText(getApplicationContext(), "Stop Sending", Toast.LENGTH_SHORT).show();
+    	String statMsg = (String)minMaxAvg.getText();
+    	statMsg = statMsg.substring(statMsg.indexOf('-')+1);
+    	minMaxAvg.setText("STOPPED -" + statMsg);
     }
     
     private void http() {
-    	wifi3g.setText("http Pressed");
+    	if ( !isSending ) {
+    		packetIndex = 0;
+    		minRtt = Long.MAX_VALUE;
+    		maxRtt = 0;
+    		avgRtt = 0;
+    		
+    		Toast.makeText(getApplicationContext(), "Conter Cleared", Toast.LENGTH_SHORT);
+    		minMaxAvg.setText("Stat Reset");
+    		
+    	} else {
+    		Toast.makeText(getApplicationContext(), "Stop before ResetCounter", Toast.LENGTH_SHORT).show();
+    	}
     }    
     
 	private String getLocalIpAddress() {

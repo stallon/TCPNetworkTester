@@ -9,7 +9,7 @@
 		android:id="@+id/textView1" 
 		android:layout_width="fill_parent" 
 		android:layout_height="wrap_content" android:gravity="center" 
-		android:paddingTop="10px" android:paddingBottom="30px"
+		android:paddingTop="10px" android:paddingBottom="10px"
 		android:textSize="20sp"/>
 		
 	<LinearLayout
@@ -45,14 +45,14 @@
 		android:gravity="center" 
 		android:layout_height="wrap_content" 
 		android:layout_width="fill_parent"
-		android:paddingBottom="20px" android:paddingTop="20px" />
+		android:paddingBottom="5px" android:paddingTop="5px" />
 	
 	<TextView 
 		android:text="Network Status Information" 
 		android:id="@+id/textView1" 
 		android:layout_width="fill_parent" 
 		android:layout_height="wrap_content" android:gravity="center" 
-		android:paddingBottom="10px" android:paddingTop="20px" android:textSize="20sp"/>
+		android:paddingBottom="5px" android:paddingTop="5px" android:textSize="20sp"/>
 
 	<LinearLayout
 		android:layout_width="fill_parent"
@@ -71,7 +71,7 @@
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content">
 		<TextView 
-			android:text="[Availability/Connectivity] : " 
+			android:text="[Availability] : " 
 			android:layout_width="wrap_content" 
 			android:layout_height="wrap_content"/>
 		<TextView 
@@ -127,14 +127,14 @@
 		android:gravity="center" 
 		android:layout_height="wrap_content" 
 		android:layout_width="fill_parent"
-		android:paddingBottom="20px" android:paddingTop="20px" />
+		android:paddingBottom="5px" android:paddingTop="5px" />
 	
 	<TextView 
 	android:text="Tx/Rx Statistics" 
 	android:id="@+id/textView1" 
 	android:layout_width="fill_parent" 
 	android:layout_height="wrap_content" android:gravity="center" 
-	android:paddingBottom="10px" android:paddingTop="20px" android:textSize="20sp"/>
+	android:paddingBottom="10px" android:paddingTop="10px" android:textSize="20sp"/>
 	<LinearLayout
 		android:layout_width="fill_parent"
 		android:layout_height="wrap_content">
@@ -160,5 +160,14 @@
 			android:id="@+id/rxStat" 
 			android:layout_width="fill_parent" 
 			android:layout_height="wrap_content"/>
+	</LinearLayout>
+	
+	<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content">	
+		<TextView 
+			android:id="@+id/minMaxAvg" 
+			android:layout_width="wrap_content" 
+			android:layout_height="wrap_content"/>	
 	</LinearLayout>
 </LinearLayout>
