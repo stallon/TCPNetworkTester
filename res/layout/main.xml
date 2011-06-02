@@ -15,31 +15,42 @@
 	<LinearLayout
 		android:id="@+id/linearLayout1" 
 		android:layout_width="fill_parent" 
-		android:layout_height="wrap_content">
+		android:layout_height="35sp">
     
 	    <Button 
-	    	android:layout_height="wrap_content" 
+	    	android:layout_height="fill_parent" 
 	    	android:id="@+id/btnConnect" 
 	    	android:layout_width="wrap_content" 
 	    	android:text="@string/connect" android:layout_weight="1"/>
 	    	
 	    <Button 
-	    	android:layout_height="wrap_content" 
+	    	android:layout_height="fill_parent" 
 	    	android:id="@+id/btnDisconnect" 
 	    	android:layout_width="wrap_content" android:text="@string/disconnect" android:layout_weight="1"/>
 	    	
 	    <Button 
 	    	android:text="@string/refresh" 
-	    	android:layout_height="wrap_content" 
+	    	android:layout_height="fill_parent" 
 	    	android:id="@+id/btnRefresh" 
 	    	android:layout_width="wrap_content" android:layout_weight="1"/>
 	</LinearLayout>
-	<LinearLayout android:id="@+id/linearLayout2" android:layout_width="fill_parent" android:layout_height="wrap_content">
-		<Button android:text="@string/send" android:layout_height="wrap_content" android:id="@+id/btnSend" android:layout_width="wrap_content" android:layout_weight="1"></Button>
-		<Button android:text="@string/stop" android:layout_height="wrap_content" android:id="@+id/btnStop" android:layout_width="wrap_content" android:layout_weight="1"></Button>
-		<Button android:text="@string/http" android:layout_height="wrap_content" android:id="@+id/btnHttp" android:layout_width="wrap_content" android:layout_weight="1"></Button>
+	
+	<LinearLayout android:id="@+id/linearLayout2" android:layout_width="fill_parent" android:layout_height="35sp">
+		<Button android:text="@string/send" android:id="@+id/btnSend" android:layout_width="wrap_content" android:layout_weight="1" android:layout_height="fill_parent"></Button>
+		<Button android:text="@string/stop" android:id="@+id/btnStop" android:layout_width="wrap_content" android:layout_weight="1" android:layout_height="fill_parent"></Button>
+		<Button android:text="@string/http" android:id="@+id/btnHttp" android:layout_width="wrap_content" android:layout_weight="1" android:layout_height="fill_parent"></Button>
 	</LinearLayout>
 	
+	<LinearLayout 
+		android:layout_width="fill_parent"
+		android:layout_height="40sp">
+		<EditText android:id="@+id/sendPeriod" android:maxLength="10" android:text="1000" android:layout_width="100dp" android:layout_height="fill_parent"></EditText>
+		<TextView android:layout_width="wrap_content" android:text="(ms)" android:layout_height="fill_parent" android:id="@+id/textView2"></TextView>
+		<EditText android:id="@+id/packetLength" android:maxLength="10" android:text="1024" android:layout_width="100dp" android:layout_height="fill_parent"></EditText>
+		<TextView android:layout_width="wrap_content" android:text="(bytes)" android:layout_height="fill_parent" android:id="@+id/textView3"></TextView>
+	</LinearLayout>
+		
+		
 	<TextView 
 		android:text="-----------------------------------" 
 		android:gravity="center" 
@@ -49,7 +60,7 @@
 	
 	<TextView 
 		android:text="Network Status Information" 
-		android:id="@+id/textView1" 
+		android:id="@+id/textView5" 
 		android:layout_width="fill_parent" 
 		android:layout_height="wrap_content" android:gravity="center" 
 		android:paddingBottom="5px" android:paddingTop="5px" android:textSize="20sp"/>
@@ -131,7 +142,7 @@
 	
 	<TextView 
 	android:text="Tx/Rx Statistics" 
-	android:id="@+id/textView1" 
+	android:id="@+id/textView4" 
 	android:layout_width="fill_parent" 
 	android:layout_height="wrap_content" android:gravity="center" 
 	android:paddingBottom="10px" android:paddingTop="10px" android:textSize="20sp"/>

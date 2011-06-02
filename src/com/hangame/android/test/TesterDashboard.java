@@ -32,6 +32,7 @@ import android.os.Message;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.view.View;
@@ -44,6 +45,9 @@ public class TesterDashboard extends Activity {
 	private Button btnSend;
 	private Button btnStop;
 	private Button btnHttp;
+	
+	private EditText sendPeriod;
+	private EditText packetLength;
 	
 	private TextView isAvailable;
 	private TextView wifi3g;
@@ -99,6 +103,9 @@ public class TesterDashboard extends Activity {
         btnSend = (Button)findViewById(R.id.btnSend);
         btnStop = (Button)findViewById(R.id.btnStop);
         btnHttp = (Button)findViewById(R.id.btnHttp);
+        
+        sendPeriod = (EditText)this.findViewById(R.id.sendPeriod);
+        packetLength = (EditText)findViewById(R.id.packetLength);
         
         wifi3g = (TextView)findViewById(R.id.wifi3g);
         isAvailable = (TextView)findViewById(R.id.isAvailable);
@@ -385,12 +392,14 @@ public class TesterDashboard extends Activity {
     						continue;
     					}
     					
+    					int length = Integer.parseInt(packetLength.getText().toString());
+    					
     					InputStream in = socketToServer.getInputStream();
-    					byte[] echoReply = new byte[Packet.PACKET_SIZE];
+    					byte[] echoReply = new byte[length];
     					int count = 0;
     					
-    					while ( count < Packet.PACKET_SIZE ) {
-    						count += in.read(echoReply, count, Packet.PACKET_SIZE-count);	// read till byte stream read can fill the packet buffer (20bytes)
+    					while ( count < length ) {
+    						count += in.read(echoReply, count, length-count);	// read till byte stream read can fill the packet buffer (20bytes)
     					}
     					
     					ByteBuffer readBuf = ByteBuffer.wrap(echoReply);
@@ -401,7 +410,8 @@ public class TesterDashboard extends Activity {
     					int idx = readBuf.getInt();
     					int network = readBuf.getInt();
     					double timestamp = readBuf.getDouble();
-    					Packet packet = new Packet(deviceID, type, idx, network, timestamp);
+    					
+    					Packet packet = new Packet(deviceID, type, idx, network, timestamp, length);
     					
     					// send internel message to update UI with received data
     					handler.sendMessage(handler.obtainMessage(WHAT_RECEIVE_ECHO, packet));
@@ -413,7 +423,7 @@ public class TesterDashboard extends Activity {
     						timestamp = (double)(new Date().getTime()/1000.0);
     						
     						// send echo-back with type 1 and new timestamp
-    						Packet sendPacket = new Packet(deviceID, type, idx, network, timestamp);
+    						Packet sendPacket = new Packet(deviceID, type, idx, network, timestamp, length);
     						out.write(sendPacket.encode());
     					}    					
     					
@@ -438,6 +448,8 @@ public class TesterDashboard extends Activity {
 					
 					int network = netInfo.getType();
         			long timestamp = new Date().getTime();
+        			int length = Integer.parseInt(packetLength.getText().toString());
+        			
         			Packet sendPacket = null;
         			
         			try {
@@ -447,7 +459,8 @@ public class TesterDashboard extends Activity {
 						                        0, 
 						                        packetIndex++, 
 								                network, 
-								                (double)(timestamp/1000.0));
+								                (double)(timestamp/1000.0),
+								                length);
 						
 						out.write(sendPacket.encode());
 						out.flush();
@@ -461,7 +474,9 @@ public class TesterDashboard extends Activity {
     	
     	// Schedule Send Task
     	sendTimer = new Timer();
-    	sendTimer.scheduleAtFixedRate(sendTask, 0, 1000);  
+    	int period = Integer.parseInt(sendPeriod.getText().toString());
+    	sendTimer.scheduleAtFixedRate(sendTask, 0, period); 
+    	
     	Toast.makeText(getApplicationContext(), "Start Sending", Toast.LENGTH_SHORT).show();
     }
     
