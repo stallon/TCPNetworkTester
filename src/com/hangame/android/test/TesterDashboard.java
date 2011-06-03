@@ -76,6 +76,7 @@ public class TesterDashboard extends Activity {
 	private final static int WHAT_RECEIVE_ECHO = 2;
 	private final static int WHAT_SEND_FAIL = 3;
 	private final static int WHAT_RECEIVE_FAIL = 4;
+	private final static int WHAT_SIGNATURE_FAIL = 5;
 	
 	// Objects for echo data transmission
 	private int deviceID;
@@ -362,6 +363,10 @@ public class TesterDashboard extends Activity {
 		case WHAT_RECEIVE_FAIL:
 			rxStat.setText((String)msg.obj);	// display exception message thrown by read thread.
 			break;
+			
+		case WHAT_SIGNATURE_FAIL:
+			rxStat.setText("WRONG SIGNATURE : 0x" + Integer.toHexString(msg.arg1));
+			break;
 		default:
 			rxStat.setText("Unknown Internal Message Received");
 		}
@@ -395,11 +400,29 @@ public class TesterDashboard extends Activity {
     					int length = Integer.parseInt(packetLength.getText().toString());
     					
     					InputStream in = socketToServer.getInputStream();
-    					byte[] echoReply = new byte[length];
-    					int count = 0;
     					
-    					while ( count < length ) {
-    						count += in.read(echoReply, count, length-count);	// read till byte stream read can fill the packet buffer (20bytes)
+    					// Read first 4 bytes for SIGNATURE check.
+    					ByteBuffer signature = ByteBuffer.allocate(4);
+    					signature.order(ByteOrder.LITTLE_ENDIAN);
+    					in.read(signature.array(), 0, 4);
+    					int signatureValue = signature.getInt();
+
+    					boolean signatureReceived = false;
+    					while ( !signatureReceived ) {
+    						if ( signatureValue == Packet.PACKET_SIGNATURE ) {
+    							signatureReceived = true;
+    						} else {
+    							handler.sendMessage(handler.obtainMessage(WHAT_SIGNATURE_FAIL, signatureValue, 0));
+    							signature.get();
+    							signature.put((byte)in.read());
+    							signatureValue = signature.getInt();
+    						}
+    					}
+    					
+    					byte[] echoReply = new byte[length-4];
+    					int count = 0;   					
+    					while ( count < length-4 ) {
+    						count += in.read(echoReply, count, length-4-count);	// read till byte stream read can fill the packet buffer (20bytes)
     					}
     					
     					ByteBuffer readBuf = ByteBuffer.wrap(echoReply);
@@ -457,7 +480,7 @@ public class TesterDashboard extends Activity {
 						
 						sendPacket = new Packet(TesterDashboard.this.deviceID,
 						                        0, 
-						                        packetIndex++, 
+						                        ++packetIndex, 
 								                network, 
 								                (double)(timestamp/1000.0),
 								                length);

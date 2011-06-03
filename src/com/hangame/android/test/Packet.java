@@ -18,6 +18,7 @@ class Packet {
 		ByteBuffer packet = ByteBuffer.allocate(packetLength); 
 		packet.order(ByteOrder.LITTLE_ENDIAN);
 		
+		packet.putInt(PACKET_SIGNATURE);
 		packet.putInt(this.deviceID);
 		packet.putInt(this.type);
 		packet.putInt(this.idx);
@@ -38,5 +39,6 @@ class Packet {
 	public double timestamp;
 	public int packetLength;
 	
-	public final static int PACKET_SIZE_WITHOUT_DUMMY = 28;
+	public final static int PACKET_SIZE_WITHOUT_DUMMY = 32;
+	public final static int PACKET_SIGNATURE = 0xCAFEBAB0;
 };
