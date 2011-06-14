@@ -1,24 +1,16 @@
 package com.hangame.android.test;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.SocketChannel;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -59,7 +51,7 @@ public class TesterDashboard extends Activity {
 	private TextView rxStat;
 	private TextView minMaxAvg;
 		
-	private Socket socketToServer = null;
+	private SocketChannel socketToServer = null;
 	private String SERVER_IP;
 	private int SERVER_PORT;
 	
@@ -87,6 +79,9 @@ public class TesterDashboard extends Activity {
 	private long minRtt = Long.MAX_VALUE;
 	private long maxRtt = 0;
 	private float avgRtt = 0;
+	
+//	private InputStream receiveStream;
+	private Thread receiveThread;
 	
     /** Called when the activity is first created. */
     @Override
@@ -230,8 +225,16 @@ public class TesterDashboard extends Activity {
     	}
     	
     	try {
-    		// Connect to echo server
-    		socketToServer = new Socket(SERVER_IP, SERVER_PORT);
+    		// Connect to echo server	
+    		socketToServer = SocketChannel.open();
+    		socketToServer.configureBlocking(false);
+    		socketToServer.connect(new InetSocketAddress(SERVER_IP, SERVER_PORT));
+    		
+    		while ( !socketToServer.finishConnect() ) {
+    			try {
+    				Thread.sleep(100);
+    			} catch(InterruptedException ie) { }
+    		}
     		
     		// state initialization
     		isSending = false;
@@ -244,7 +247,7 @@ public class TesterDashboard extends Activity {
     }
     
     private void disconnect() {
-    	if ( null == socketToServer || socketToServer.isClosed() ) {
+    	if ( null == socketToServer || !socketToServer.isConnected() ) {
 			Toast.makeText(getApplicationContext(), "Already Disconnected", Toast.LENGTH_SHORT).show();
 			return;
 		}
@@ -295,13 +298,11 @@ public class TesterDashboard extends Activity {
     	if ( null != socketToServer ) {
     		if ( socketToServer.isConnected() ) {
     			isConnected.setText("TCP Connected");
-    		} else if ( socketToServer.isClosed() ) {
-    			isConnected.setText("TCP Disconnected");
     		} else {
-    			isConnected.setText("TCP Unknown");
+    			isConnected.setText("TCP NOT Connected");
     		}
     	} else {
-    		isConnected.setText("TCP Disconnected");
+    		isConnected.setText("Socket is NULL");
     	}	 
     	
     	// Get Local IP Address and Display on the screen
@@ -316,7 +317,7 @@ public class TesterDashboard extends Activity {
     	if ( null == socketToServer || !socketToServer.isConnected() ) {
     		socketIpAddr.setText("0.0.0.0");
     	} else {
-    		socketIpAddr.setText(socketToServer.getLocalAddress().getHostAddress());
+    		socketIpAddr.setText(socketToServer.socket().getLocalAddress().getHostAddress());
     	}
     }
     
@@ -384,56 +385,45 @@ public class TesterDashboard extends Activity {
     		return;
     	}
     	
-    	// send flag is set to TRUE
+    	// Prepare for SEND
     	isSending = true;
+		final int length = Integer.parseInt(packetLength.getText().toString());
     	
     	// Spawn a Message Dispatching and Reading Thread
-    	Thread receiveThread = new Thread() {
+    	receiveThread = new Thread() {
     		@Override
     		public void run() {
-
+    			
+    			int signatureValue;
+    			int deviceID, type, idx, network;
+    			double timestamp;
+    			
+    			ByteBuffer buf = ByteBuffer.allocate(length);
+    			buf.order(ByteOrder.LITTLE_ENDIAN);
+    			
     			while ( isSending ) {
-    				try {
-    					if ( null == socketToServer || !socketToServer.isConnected() ) {
-    						try { Thread.sleep(100); } catch (InterruptedException e) {	}
+    				try {    					
+    					int nBytes = socketToServer.read(buf);
+    					
+    					if ( nBytes == 0 ) {
+    						Thread.sleep(10);
+    						continue;
+    					} else if ( buf.hasRemaining() ) {
     						continue;
     					}
     					
-    					int length = Integer.parseInt(packetLength.getText().toString());
-    					
-    					InputStream in = socketToServer.getInputStream();
-    					
-    					// Read first 4 bytes for SIGNATURE check.
-    					ByteBuffer signature = ByteBuffer.allocate(4);
-    					signature.order(ByteOrder.LITTLE_ENDIAN);
-    					in.read(signature.array(), 0, 4);
-    					int signatureValue = signature.getInt();
-
-    					boolean signatureReceived = false;
-    					while ( !signatureReceived ) {
-    						if ( signatureValue == Packet.PACKET_SIGNATURE ) {
-    							signatureReceived = true;
-    						} else {
-    							handler.sendMessage(handler.obtainMessage(WHAT_SIGNATURE_FAIL, signatureValue, 0));
-    							
-    							break;
-    						}
+    					buf.rewind();
+    					signatureValue = buf.getInt();
+    					if ( signatureValue != Packet.PACKET_SIGNATURE ) {
+    						handler.sendMessage(handler.obtainMessage(WHAT_SIGNATURE_FAIL, signatureValue));
+    						break;
     					}
-    					
-    					byte[] echoReply = new byte[length-4];
-    					int count = 0;   					
-    					while ( count < length-4 ) {
-    						count += in.read(echoReply, count, length-4-count);	// read till byte stream read can fill the packet buffer (20bytes)
-    					}
-    					
-    					ByteBuffer readBuf = ByteBuffer.wrap(echoReply);
-    					readBuf.order(ByteOrder.LITTLE_ENDIAN);
-    					
-    					int deviceID = readBuf.getInt();
-    					int type = readBuf.getInt();
-    					int idx = readBuf.getInt();
-    					int network = readBuf.getInt();
-    					double timestamp = readBuf.getDouble();
+    					deviceID = buf.getInt();
+    					type = buf.getInt();
+    					idx = buf.getInt();
+    					network = buf.getInt();
+    					timestamp = buf.getDouble();
+    					buf.clear();
     					
     					Packet packet = new Packet(deviceID, type, idx, network, timestamp, length);
     					
@@ -442,19 +432,17 @@ public class TesterDashboard extends Activity {
     					
     					// Echo-back type 1 packet
     					if ( 0 == type && deviceID == TesterDashboard.this.deviceID ) {
-    						OutputStream out = socketToServer.getOutputStream();
     						type = 1;
     						timestamp = (double)(new Date().getTime()/1000.0);
     						
     						// send echo-back with type 1 and new timestamp
     						Packet sendPacket = new Packet(deviceID, type, idx, network, timestamp, length);
-    						byte[] packetToSend = sendPacket.encode();
-    						out.write(packetToSend);
-    						out.flush();
-    					}    					
-    					
+    						ByteBuffer writeBuf = ByteBuffer.wrap(sendPacket.encode());
+    						socketToServer.write(writeBuf);
+    					}    
     				} catch(Exception ioe) {
     					handler.sendMessage(handler.obtainMessage(WHAT_RECEIVE_FAIL, ioe.getMessage()));
+    					break;
     				}
     			}
     		}
@@ -479,8 +467,6 @@ public class TesterDashboard extends Activity {
         			Packet sendPacket = null;
         			
         			try {
-						BufferedOutputStream out = new BufferedOutputStream(socketToServer.getOutputStream());
-						
 						sendPacket = new Packet(TesterDashboard.this.deviceID,
 						                        0, 
 						                        ++packetIndex, 
@@ -488,8 +474,7 @@ public class TesterDashboard extends Activity {
 								                (double)(timestamp/1000.0),
 								                length);
 						
-						out.write(sendPacket.encode());
-						out.flush();
+						socketToServer.write(ByteBuffer.wrap(sendPacket.encode()));
 						handler.sendMessage(handler.obtainMessage(WHAT_SEND_ECHO, sendPacket));
 					} catch (Exception e) {
 						handler.sendMessage(handler.obtainMessage(WHAT_SEND_FAIL, packetIndex, 0, e.getMessage()));
@@ -514,6 +499,7 @@ public class TesterDashboard extends Activity {
     	
     	isSending = false;
     	sendTimer.cancel();
+//    	receiveThread.interrupt();
     	
     	Toast.makeText(getApplicationContext(), "Stop Sending", Toast.LENGTH_SHORT).show();
     	String statMsg = (String)minMaxAvg.getText();
