@@ -1,5 +1,6 @@
 package com.hangame.android.test;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -354,7 +355,7 @@ public class TesterDashboard extends Activity {
 				
 				minRtt = (rtt < minRtt) ? rtt : minRtt;
 				maxRtt = ( rtt > maxRtt ) ? rtt : maxRtt;
-				avgRtt = (( avgRtt * packet.idx ) + rtt ) / (packet.idx + 1);
+				avgRtt = (( avgRtt * (packet.idx-1) ) + rtt ) / (packet.idx);
 				
 				minMaxAvg.setText("SENDING - MIN[" + minRtt + "ms]  MAX[" + maxRtt + "ms]   AVG[" + avgRtt + "ms]"  );
 			}
@@ -366,6 +367,7 @@ public class TesterDashboard extends Activity {
 			
 		case WHAT_SIGNATURE_FAIL:
 			rxStat.setText("WRONG SIGNATURE : 0x" + Integer.toHexString(msg.arg1));
+			this.stop();
 			break;
 		default:
 			rxStat.setText("Unknown Internal Message Received");
@@ -413,9 +415,8 @@ public class TesterDashboard extends Activity {
     							signatureReceived = true;
     						} else {
     							handler.sendMessage(handler.obtainMessage(WHAT_SIGNATURE_FAIL, signatureValue, 0));
-    							signature.get();
-    							signature.put((byte)in.read());
-    							signatureValue = signature.getInt();
+    							
+    							break;
     						}
     					}
     					
@@ -447,7 +448,9 @@ public class TesterDashboard extends Activity {
     						
     						// send echo-back with type 1 and new timestamp
     						Packet sendPacket = new Packet(deviceID, type, idx, network, timestamp, length);
-    						out.write(sendPacket.encode());
+    						byte[] packetToSend = sendPacket.encode();
+    						out.write(packetToSend);
+    						out.flush();
     					}    					
     					
     				} catch(Exception ioe) {

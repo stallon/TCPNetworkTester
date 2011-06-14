@@ -24,7 +24,7 @@ typedef struct  {
 } THREAD_PARAM, *PTHREAD_PARAM;
 
 #pragma pack(1)
-struct packet_t {
+struct Packet {
 	unsigned int signature;
 	unsigned int deviceID;
 	unsigned int type;
@@ -38,7 +38,7 @@ struct packet_t {
 
 #define SIGNATURE	0xCAFEBAB0
 #define SIGNATURE_LENGTH	4
-#define HEADER_LENGTH	sizeof(packet_t)
+#define HEADER_LENGTH	sizeof(Packet)
 
 char* GetNetworkTypeString (unsigned int x)
 {
@@ -62,7 +62,7 @@ unsigned __stdcall PacketThreadProc(void* lpParameter)
 	
 	char message[BUFSIZE] = {0,};
 	char headerBuf[HEADER_LENGTH];
-	packet_t * packet = NULL;
+	Packet * packet = NULL;
 
 	int len;			// return value placeholder of recv() function
 	int packetLength;	// length of (SIGNATURE + HEADER + dummyData)
@@ -118,7 +118,7 @@ unsigned __stdcall PacketThreadProc(void* lpParameter)
 		memcpy(&dummyDataSize, headerBuf+28, sizeof(unsigned int));
 
 		packetLength = HEADER_LENGTH + dummyDataSize;
-		packet = (packet_t*)malloc(packetLength);
+		packet = (Packet*)malloc(packetLength);
 
 		// STEP 3. read the full packet from the socket 
 		int receivedBytes = 0;	// received bytes counter SHOULD be reset at this point.
@@ -174,7 +174,7 @@ unsigned __stdcall PacketThreadProc(void* lpParameter)
 			}
 			
 			GetLocalTime(&lt);
-			sprintf (message, "%02d:%02d:%02d, %u,%u,%u,%s,%f\n", lt.wHour, lt.wMinute, lt.wSecond, sizeof(packet_t)+packet->dummyDataSize, packet->deviceID, packet->idx, GetNetworkTypeString(packet->network), packet->timestamp - packets[packet->idx]);
+			sprintf (message, "%02d:%02d:%02d, %u,%u,%u,%s,%f\n", lt.wHour, lt.wMinute, lt.wSecond, sizeof(Packet)+packet->dummyDataSize, packet->deviceID, packet->idx, GetNetworkTypeString(packet->network), packet->timestamp - packets[packet->idx]);
 			if (fp) {
 				fputs(message,fp);
 				fflush(fp);
