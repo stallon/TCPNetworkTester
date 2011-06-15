@@ -111,7 +111,8 @@ void __stdcall OnReceived(Acceptor::THandle hAcceptor, Link::THandle hLink, void
 
 	// move received data to the link-local buffer
 	LinkContext* ctx = (LinkContext*)Link::GetData(hLink);
-	MemoryPool::XMemory pStream = XStream::Detach(hStream);
+	MemoryPool::XMemory pStream = XStream::Detach(hStream);		// if you use XStream::GetXMemory(hStream) to move received data into link-local buffer,
+																// No data is removed from the TCP receive buffer.
 	ctx->WriteBuffer(pStream, receivedBytes);
 	MemoryPool::Free(pStream);
 
@@ -135,6 +136,19 @@ void __stdcall OnReceived(Acceptor::THandle hAcceptor, Link::THandle hLink, void
 	if ( SIGNATURE != packetHeader.signature )
 	{
 		std::cout << ">>> [" << RemoteIPAddress << "] Invalid SIGNATURE. So Disconnect the link" << std::endl;
+		
+		int len = ctx->GetBufferLength();
+		char* remaining = new char[len];
+		ctx->ReadBuffer(remaining, len);
+		
+		printf(">>> [%s] buffer remaining %d bytes : 0x", RemoteIPAddress, len);
+		for(unsigned i = 0; i < len; i++ ) 
+		{
+			printf("%X", *(remaining+i));
+		}
+
+		printf("\n");
+		delete [] remaining;
 
 		Link::Release(hLink);	// decrease the ref-count which is increased at the first stage of this function
 		Link::Close(hLink);		// disconnect the link
@@ -156,7 +170,8 @@ void __stdcall OnReceived(Acceptor::THandle hAcceptor, Link::THandle hLink, void
 	} 
 	
 	// Now we are sure that we have full message, 
-	packetToSend = (Packet*)malloc(sizeof(Packet)+packetHeader.dummyDataSize);
+	packetToSend = (Packet*)malloc(sizeof(Packet)+packetHeader.dummyDataSize);		// if you use stack memory for the packetToSend, you might experience buffer overflow.
+																					// Because only sizeof(Packet) bytes is allocated for packetToSend automatically.
 	ctx->ReadBuffer(packetToSend, sizeof(Packet)+packetHeader.dummyDataSize);
 
 	// Print-out packet information

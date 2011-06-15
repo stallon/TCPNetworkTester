@@ -14,7 +14,7 @@ class Packet {
 		this.timestamp = timestamp;
 		this.packetLength = packetLength;
 	}
-	public byte[] encode() {
+	public ByteBuffer encode() {
 		ByteBuffer packet = ByteBuffer.allocate(packetLength); 
 		packet.order(ByteOrder.LITTLE_ENDIAN);
 		
@@ -30,7 +30,9 @@ class Packet {
 		Arrays.fill(padding, (byte)'1');
 		packet.put(padding);
 		
-		return packet.array();
+		packet.rewind();
+		
+		return packet;
 	}
 	public int deviceID;
 	public int type;

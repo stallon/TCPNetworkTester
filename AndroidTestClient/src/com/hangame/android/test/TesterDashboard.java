@@ -306,7 +306,7 @@ public class TesterDashboard extends Activity {
     	}	 
     	
     	// Get Local IP Address and Display on the screen
-    	String ipAddress = getLocalIpAddress();
+    	String ipAddress = getLocalIpAddress(netType);
     	if ( null != ipAddress ) {
     		ipAddr.setText(ipAddress);
     	} else {
@@ -341,6 +341,7 @@ public class TesterDashboard extends Activity {
 			idx = msg.arg1;
 			String errMsg = (String)msg.obj;
 			txStat.setText(errMsg + "-- idx[" + idx + "] failTime[" + new Date().toLocaleString() + "]");
+			stop();
 			break;
 			
 		case WHAT_RECEIVE_ECHO:
@@ -437,8 +438,7 @@ public class TesterDashboard extends Activity {
     						
     						// send echo-back with type 1 and new timestamp
     						Packet sendPacket = new Packet(deviceID, type, idx, network, timestamp, length);
-    						ByteBuffer writeBuf = ByteBuffer.wrap(sendPacket.encode());
-    						socketToServer.write(writeBuf);
+    						TesterDashboard.this.send(sendPacket.encode(), length);
     					}    
     				} catch(Exception ioe) {
     					handler.sendMessage(handler.obtainMessage(WHAT_RECEIVE_FAIL, ioe.getMessage()));
@@ -464,18 +464,19 @@ public class TesterDashboard extends Activity {
         			long timestamp = new Date().getTime();
         			int length = Integer.parseInt(packetLength.getText().toString());
         			
-        			Packet sendPacket = null;
+        			Packet packetToSend = null;
         			
         			try {
-						sendPacket = new Packet(TesterDashboard.this.deviceID,
+						packetToSend = new Packet(TesterDashboard.this.deviceID,
 						                        0, 
 						                        ++packetIndex, 
 								                network, 
 								                (double)(timestamp/1000.0),
 								                length);
 						
-						socketToServer.write(ByteBuffer.wrap(sendPacket.encode()));
-						handler.sendMessage(handler.obtainMessage(WHAT_SEND_ECHO, sendPacket));
+						TesterDashboard.this.send(packetToSend.encode(), length);
+						handler.sendMessage(handler.obtainMessage(WHAT_SEND_ECHO, packetToSend));
+						
 					} catch (Exception e) {
 						handler.sendMessage(handler.obtainMessage(WHAT_SEND_FAIL, packetIndex, 0, e.getMessage()));
 					}
@@ -489,6 +490,13 @@ public class TesterDashboard extends Activity {
     	sendTimer.scheduleAtFixedRate(sendTask, 0, period); 
     	
     	Toast.makeText(getApplicationContext(), "Start Sending", Toast.LENGTH_SHORT).show();
+    }
+    
+    private synchronized void send(ByteBuffer packetToSend, int len) throws IOException {
+    	    	
+    	while ( packetToSend.position() < len ) {
+    		socketToServer.write(packetToSend);
+    	}
     }
     
     private void stop() {
@@ -522,7 +530,7 @@ public class TesterDashboard extends Activity {
     	}
     }    
     
-	private String getLocalIpAddress() {
+	private String getLocalIpAddress(String netType) {
 		try {
 			Enumeration<NetworkInterface> netInterfaces = NetworkInterface.getNetworkInterfaces();
 			
@@ -532,6 +540,10 @@ public class TesterDashboard extends Activity {
 				while ( inetAddrs.hasMoreElements() ) {
 					InetAddress inetAddr = inetAddrs.nextElement();
 					if ( !inetAddr.isLoopbackAddress() ) {
+						String addr = inetAddr.getHostAddress();
+						if ( netType.equals("WIFI") && !addr.startsWith("192") ) {
+							continue;
+						}
 						return inetAddr.getHostAddress();
 					}
 				}
