@@ -1,4 +1,4 @@
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "LinkContext.h"
 
 
@@ -96,7 +96,7 @@ int LinkContext::GetBufferLength() const
 	return XStream::GetLength(buffer_);
 }
 
-void __stdcall LinkContext::OnLinkDestroy(Link::Handle hLink, void* context)
+void WINAPI LinkContext::OnLinkDestroy(Link::Handle hLink, void* context)
 {
 	// Get Client IP Address.
 	char RemoteIPAddress[16];

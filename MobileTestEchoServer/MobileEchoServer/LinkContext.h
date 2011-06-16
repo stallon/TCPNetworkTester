@@ -38,7 +38,7 @@ public:
 	void WriteLog(const char* s);
 
 public:
-	static void __stdcall OnLinkDestroy(Link::Handle hLink, void* context);
+	static void WINAPI OnLinkDestroy(Link::Handle hLink, void* context);
 
 private:
 	std::ofstream logfile_;

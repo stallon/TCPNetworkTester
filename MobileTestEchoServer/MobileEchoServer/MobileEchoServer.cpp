@@ -7,9 +7,11 @@
 * $Id: $
 */
 
+#if !defined(_WIN32) && !defined(_WIN64)
+#include <time.h>
+#endif
 
 #include "stdafx.h"
-
 #include <iostream>
 #include <fstream>
 #include <cstring>
@@ -24,17 +26,19 @@
 #include "LinkContext.h"
 #include "Packet.h"
 
+#define MAX_PATH	256
+
 using namespace XSystem;
 using namespace XInNetwork;
 
 Threading::CriticalSection cs;
 
-char* GetNetworkTypeString (unsigned int x)
+const char* GetNetworkTypeString (unsigned int x)
 {
 	return (x) ? "WIFI" : "3G";
 }
 
-void __stdcall OnAccepted(Acceptor::THandle hAcceptor, Link::THandle hLink, void * pContext)
+void WINAPI OnAccepted(Acceptor::THandle hAcceptor, Link::THandle hLink, void * pContext)
 {
 	Address::Handle RemoteAddress = Link::GetRemoteAddress(hLink);
 	if ( NULL == RemoteAddress )
@@ -57,10 +61,17 @@ void __stdcall OnAccepted(Acceptor::THandle hAcceptor, Link::THandle hLink, void
 //	Address::DestroyHandle(RemoteAddress);
 	LinkContext* ctx = new LinkContext;
 
-	SYSTEMTIME lt;
 	char filename[MAX_PATH];
+#if defined(_WIN32) || (_WIN64)
+	SYSTEMTIME lt;
 	GetLocalTime(&lt);
 	sprintf(filename, "packetlog-%04d%02d%02d_%02d%02d%02d.txt", lt.wYear, lt.wMonth, lt.wDay, lt.wHour, lt.wMinute, lt.wSecond);
+#else
+	struct tm lt;
+	time_t now = time(NULL);
+	localtime_r(&now, &lt);
+	sprintf(filename, "packetlog-%04d%02d%02d_%02d%02d%02d.txt", lt.tm_year+1900, lt.tm_mon+1, lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec);
+#endif
 	
 	ctx->OpenLogfile(filename);
 
@@ -72,7 +83,7 @@ void __stdcall OnAccepted(Acceptor::THandle hAcceptor, Link::THandle hLink, void
 
 
 
-void __stdcall OnReceived(Acceptor::THandle hAcceptor, Link::THandle hLink, void * pContext)
+void WINAPI OnReceived(Acceptor::THandle hAcceptor, Link::THandle hLink, void * pContext)
 {
 	int receivedBytes = 0;
 	int internalBufferedBytes = 0;
@@ -224,10 +235,30 @@ void __stdcall OnReceived(Acceptor::THandle hAcceptor, Link::THandle hLink, void
 		}
 		else
 		{
+			char message[1024];
+
+		#if defined(_WIN32) || (_WIN64)
 			SYSTEMTIME lt;
 			GetLocalTime(&lt);
-			char message[1024];
-			sprintf (message, "%02d:%02d:%02d, %u,%u,%u,%s,%f\n", lt.wHour, lt.wMinute, lt.wSecond, sizeof(Packet)+packetToSend->dummyDataSize, packetToSend->deviceID, packetToSend->idx, GetNetworkTypeString(packetToSend->network), packetToSend->timestamp-prevTime);
+			sprintf (message, "%02d:%02d:%02d, %u,%u,%u,%s,%f\n", 
+						lt.wHour, lt.wMinute, lt.wSecond, 
+						sizeof(Packet)+packetToSend->dummyDataSize, 
+						packetToSend->deviceID, 
+						packetToSend->idx, 
+						GetNetworkTypeString(packetToSend->network), 
+						packetToSend->timestamp-prevTime);
+		#else
+			struct tm lt;
+			time_t now = time(NULL);
+			localtime_r(&now, &lt);
+			sprintf (message, "%02d:%02d:%02d, %u,%u,%u,%s,%f\n", 
+						lt.tm_hour, lt.tm_min, lt.tm_sec, 
+						sizeof(Packet)+packetToSend->dummyDataSize, 
+						packetToSend->deviceID, 
+						packetToSend->idx, 
+						GetNetworkTypeString(packetToSend->network), 
+						packetToSend->timestamp-prevTime);
+		#endif
 
 			ctx->WriteLog(message);
 			ctx->RemovePacketTime(packetToSend->idx);
@@ -243,7 +274,7 @@ void __stdcall OnReceived(Acceptor::THandle hAcceptor, Link::THandle hLink, void
 
 
 
-void __stdcall OnClosed(Acceptor::THandle hAcceptor, Link::THandle hLink, void * pContext)
+void WINAPI OnClosed(Acceptor::THandle hAcceptor, Link::THandle hLink, void * pContext)
 {
 	// Get Client IP Address.
 	char RemoteIPAddress[16];
@@ -261,7 +292,7 @@ void __stdcall OnClosed(Acceptor::THandle hAcceptor, Link::THandle hLink, void *
 }
 
 
-int _tmain(int argc, _TCHAR* argv[])
+int MAIN(int argc, const char* argv[])
 {
 	int listening_port = 0;
 
