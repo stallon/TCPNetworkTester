@@ -7,8 +7,10 @@
 * $Id: $
 */
 
-#if !defined(_WIN32) && !defined(_WIN64)
+#if defined(_WIN32) || defined(_WIN64)
+#else
 #include <time.h>
+#include <unistd.h>
 #endif
 
 #include "stdafx.h"
@@ -331,7 +333,11 @@ int MAIN(int argc, const char* argv[])
 
 	while ( true )
 	{
+#if defined(_WIN32) || defined(_WIN64)
 		Sleep(300000);
+#else
+		sleep(300000);
+#endif
 	}
 
 
