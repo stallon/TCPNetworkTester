@@ -399,7 +399,9 @@ public class TesterDashboard extends Activity {
     			int deviceID, type, idx, network;
     			double timestamp;
     			
-    			ByteBuffer buf = ByteBuffer.allocate(length);
+    			int typePos, timestampPos;	// variable to temporarily store the buffer positions to overwrite type & timestamp
+    			
+    			ByteBuffer buf = ByteBuffer.allocateDirect(length);
     			buf.order(ByteOrder.LITTLE_ENDIAN);
     			
     			while ( isSending ) {
@@ -419,27 +421,28 @@ public class TesterDashboard extends Activity {
     						handler.sendMessage(handler.obtainMessage(WHAT_SIGNATURE_FAIL, signatureValue));
     						break;
     					}
+    					
     					deviceID = buf.getInt();
+    					typePos = buf.position();
     					type = buf.getInt();
     					idx = buf.getInt();
     					network = buf.getInt();
-    					timestamp = buf.getDouble();
-    					buf.clear();
-    					
-    					Packet packet = new Packet(deviceID, type, idx, network, timestamp, length);
-    					
-    					// send internel message to update UI with received data
-    					handler.sendMessage(handler.obtainMessage(WHAT_RECEIVE_ECHO, packet));
-    					
+    					timestampPos = buf.position();
+    					timestamp = buf.getDouble();   					
+    					   					
     					// Echo-back type 1 packet
     					if ( 0 == type && deviceID == TesterDashboard.this.deviceID ) {
-    						type = 1;
-    						timestamp = (double)(new Date().getTime()/1000.0);
-    						
-    						// send echo-back with type 1 and new timestamp
-    						Packet sendPacket = new Packet(deviceID, type, idx, network, timestamp, length);
-    						TesterDashboard.this.send(sendPacket.encode(), length);
-    					}    
+    						buf.putInt(typePos, 1);
+    						buf.putDouble(timestampPos, (double)(new Date().getTime()/1000.0));
+    						buf.rewind();
+    						TesterDashboard.this.send(buf, length);
+    					} 
+    					
+    					buf.clear();	
+    					
+    					// send internel message to update UI with received data
+    					handler.sendMessage(handler.obtainMessage(WHAT_RECEIVE_ECHO, new Packet(deviceID, type, idx, network, timestamp, length)));
+    					
     				} catch(Exception ioe) {
     					handler.sendMessage(handler.obtainMessage(WHAT_RECEIVE_FAIL, ioe.getMessage()));
     					break;

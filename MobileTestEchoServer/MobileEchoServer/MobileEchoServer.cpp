@@ -54,7 +54,7 @@ void __stdcall OnAccepted(Acceptor::THandle hAcceptor, Link::THandle hLink, void
 	cs.Enter();
 	
 	std::cout << ">>> Client Connected From " << RemoteIPAddress << std::endl;
-//	Address::DestroyHandle(RemoteAddress);
+
 	LinkContext* ctx = new LinkContext;
 
 	SYSTEMTIME lt;
@@ -256,8 +256,6 @@ void __stdcall OnClosed(Acceptor::THandle hAcceptor, Link::THandle hLink, void *
 	{
 		printf(">>> [%s] Link Closed.\n", RemoteIPAddress);
 	}
-
-//	Link::Release(hLink);	// Is this the right time to call Release()?
 }
 
 
@@ -299,8 +297,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	Acceptor::SetDefaultPort(hAcceptor, listening_port);
 	Acceptor::Start(hAcceptor);
 
-	std::string keyInput;
-	std::cin >> keyInput;
+	while ( true )
+	{
+		Sleep(300000);
+	}
 
 
 	return 0;

@@ -9,7 +9,7 @@ LinkContext::LinkContext()
 
 LinkContext::~LinkContext() 
 { 
-	ClearAll(); 
+	ClearAll(); \
 	XStream::DestroyHandle(buffer_);
 	if ( logfile_ ) { logfile_.close(); }
 }
