@@ -298,8 +298,9 @@ int MAIN(int argc, const char* argv[])
 
 	if ( argc < 2 ) 
 	{
-		std::cout << ">>> Usage: MobileEchoServer.exe <tcp port number larger than 10,000>" << std::endl;
-		return -1;
+//		std::cout << ">>> Usage: MobileEchoServer.exe <tcp port number larger than 10,000>" << std::endl;
+//		return -1;
+		listening_port = 11001;
 	} 
 	else
 	{
