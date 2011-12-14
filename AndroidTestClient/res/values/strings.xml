@@ -9,6 +9,7 @@
     <string name="stop">StopSend</string>
     <string name="http">ResetCounter</string>
     <string name="device_id">13403</string>
+    <string name="device_id">1932110</string>
     <string name="server_ip_">10.64.50.209</string>
     <string name="server_ip">119.205.221.76</string>
     <string name="server_port">11001</string>
