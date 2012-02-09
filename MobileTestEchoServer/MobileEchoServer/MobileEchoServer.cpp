@@ -67,7 +67,7 @@ void WINAPI OnAccepted(Acceptor::THandle hAcceptor, Link::THandle hLink, void * 
 #if defined(_WIN32) || (_WIN64)
 	SYSTEMTIME lt;
 	GetLocalTime(&lt);
-	sprintf(filename, "packetlog-%04d%02d%02d_%02d%02d%02d.txt", lt.wYear, lt.wMonth, lt.wDay, lt.wHour, lt.wMinute, lt.wSecond);
+	sprintf_s(filename, sizeof(filename), "packetlog-%04d%02d%02d_%02d%02d%02d.txt", lt.wYear, lt.wMonth, lt.wDay, lt.wHour, lt.wMinute, lt.wSecond);
 #else
 	struct tm lt;
 	time_t now = time(NULL);
@@ -242,7 +242,7 @@ void WINAPI OnReceived(Acceptor::THandle hAcceptor, Link::THandle hLink, void * 
 		#if defined(_WIN32) || (_WIN64)
 			SYSTEMTIME lt;
 			GetLocalTime(&lt);
-			sprintf (message, "%02d:%02d:%02d, %u,%u,%u,%s,%f\n", 
+			sprintf_s (message, sizeof(message), "%02d:%02d:%02d, %u,%u,%u,%s,%f\n", 
 						lt.wHour, lt.wMinute, lt.wSecond, 
 						sizeof(Packet)+packetToSend->dummyDataSize, 
 						packetToSend->deviceID, 
