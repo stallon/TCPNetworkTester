@@ -51,9 +51,10 @@ public final class R {
         public static final int http=0x7f040007;
         public static final int refresh=0x7f040004;
         public static final int send=0x7f040005;
-        public static final int server_ip=0x7f04000a;
+        public static final int server_ip=0x7f04000b;
         public static final int server_ip_=0x7f040009;
-        public static final int server_port=0x7f04000b;
+        public static final int server_ip__=0x7f04000a;
+        public static final int server_port=0x7f04000c;
         public static final int stop=0x7f040006;
     }
 }
